@@ -31,4 +31,4 @@ The result should be in your working directory under `result.ppm`.
 
 # Motivation
 
-This project is a demonstration of the capabilities of Standard ML. At uni, I keel hearing fellow students whining around about how SML is useless and you can't do anything fun with it. I don't like SML either, but as horrible as that language might be, I wrote a working path tracer in it.
+This project is a demonstration of the capabilities of Standard ML. At uni, I keep hearing fellow students whining around about how SML is useless and you can't do anything fun with it. I don't like SML either, but as horrible as that language might be, I wrote a working path tracer in it.
