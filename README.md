@@ -8,8 +8,11 @@
 
 What you're looking at is a physics based path tracer fully written in Standard ML. This project is a demonstration of the capibilities of SML, because as horrible as that language may be, I wrote a working path tracer in it. 
 
-# How to run this thing
+## Results from 2 minutes of rendering
 
+![preview-image](https://github.com/slerpyyy/sml-path-tracer/blob/master/preview.png?raw=true)
+
+# How to run this thing
 You can install SML and download the repo using the following commands:
 ```
 apt-get install smlnj
@@ -25,3 +28,6 @@ cat pathtracer.sml | sml
 The result should be in your working directory under `result.ppm`.
 
 **Note:** The sml interpreter only exits if it reads an EOF signal (mashing `Ctrl + C` doesn't work). In case you ever get stuck in the interpreter, hit `Ctrl + D` instead.
+
+# Motivation
+Fellow students crying around that SML is useless and you can't do anything fun with it
