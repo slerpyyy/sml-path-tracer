@@ -1,3 +1,11 @@
+val g_filename = "result.ppm"
+val g_dimensions = (320, 180)
+
+val g_samples = 8
+val g_bounces = 4
+val g_dropoff = 2
+
+
 type v3 = real * real * real;
 
 fun v3c s = (s,s,s);
@@ -112,7 +120,7 @@ fun render rng ro rd n 0 = (v3c 0.0)
 		val nrd = hemi sn rng
 		val nro = v3addvv sp (v3mulvs sn 0.001)
 
-		val nn = Int.max (n div 2, 1)
+		val nn = Int.max (n div g_dropoff, 1)
 		val nl = l - 1
 
 		fun accum rngk a 0 = a
@@ -137,7 +145,7 @@ fun pixel x y w h =
 		val rd = v3norm (rdx, rdy, rdz)
 		val ro = (0.0, 1.0, ~6.2)
 
-		val emit = render seed ro rd 16 4
+		val emit = render seed ro rd g_samples g_bounces
 
 		val col = v3mulvs emit 12.0
 		val col = v3m (fn c => Real.max(0.0, Real.min(1.0, c))) col
@@ -187,7 +195,7 @@ fun writeGrid file width height =
 	end;
 
 
-fun writePPM name width height =
+fun writePPM name (width, height) =
 	let
 		val file = TextIO.openOut name
 		val dimensions = (Int.toString(width) ^ " " ^ Int.toString(height))
@@ -197,4 +205,4 @@ fun writePPM name width height =
 	end;
 
 
-writePPM "result.ppm" 320 180;
+writePPM g_filename g_dimensions;
