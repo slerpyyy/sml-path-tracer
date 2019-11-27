@@ -8,12 +8,6 @@ val g_dropoff = 2
 
 type v3 = real * real * real;
 
-fun v3c s = (s,s,s);
-fun v3m f (x,y,z) = (f x, f y, f z);
-fun v3op f (x,y,z) (a,b,c) = (f x a, f y b, f z c);
-
-fun v3neg (x,y,z) : v3 = (~x, ~y, ~z);
-
 fun v3addvv (x,y,z) (a,b,c) : v3 = (x+a, y+b, z+c);
 fun v3addvs (x,y,z)    s    : v3 = (x+s, y+s, z+s);
 fun v3addsv    s    (x,y,z) : v3 = (s+x, s+y, s+z);
@@ -29,6 +23,15 @@ fun v3mulsv    s    (x,y,z) : v3 = (s*x, s*y, s*z);
 fun v3divvv (x,y,z) (a,b,c) : v3 = (x/a, y/b, z/c);
 fun v3divvs (x,y,z)    s    : v3 = (x/s, y/s, z/s);
 fun v3divsv    s    (x,y,z) : v3 = (s/x, s/y, s/z);
+
+
+fun v3r s = (s,s,s);
+fun v3i s = v3r (Real.fromInt s);
+
+fun v3m f (x,y,z) = (f x, f y, f z);
+fun v3op f (x,y,z) (a,b,c) = (f x a, f y b, f z c);
+
+fun v3neg (x,y,z) : v3 = (~x, ~y, ~z);
 
 fun v3dot (x,y,z) (a,b,c) : real = x*a + y*b + z*c;
 fun v3len v = Math.sqrt(v3dot v v);
@@ -50,7 +53,7 @@ fun v3hash (x,y,z) : v3 =
 	end;
 
 
-fun hemi n (rx,ry,_) =
+fun hemi n (rx,ry,_) : v3 =
 	let
 		val a = 2.0 * rx - 1.0;
 		val b = 2.0 * ry * Math.pi;
@@ -63,19 +66,26 @@ fun hemi n (rx,ry,_) =
 
 fun sphere (t,sp,sn,e) emit ro rd =
 	let
+		val l = 1.0 + (v3len ro)
+
 		fun h d q 0 = (d, q)
 		  | h d _ i =
 			let
 				val p = v3addvv ro (v3mulvs rd d)
 				val m = v3len(p) - 1.0
 			in
-				if m > 0.001
-				then h (d+m) p (i-1)
-				else h (d+m) p 0
+				if d > l
+				then
+					(10000.0, v3i 0)
+				else
+					if m > 0.0001
+					then h (d+m) p (i-1)
+					else h (d+m) p 0
 			end
 
-		val (nt,nsp) = h 0.0 (v3c 0.0) 16
-		val nsn = (v3norm nsp)
+		val (nt,nsp) = h 0.0 (v3i 0) 64
+		val nsp = (v3norm nsp)
+		val nsn = nsp
 	in
 		if nt < t
 		then (nt, nsp, nsn, emit)
@@ -98,10 +108,10 @@ fun plane (t,sp,sn,e) emit ro rd n d =
 
 fun tracer ro rd =
 	let
-		val hit = (10000.0, v3c 0.0, v3c 0.0, v3c 0.0)
+		val hit = (10000.0, v3i 0, v3i 0, v3i 0)
 		val hit = sphere hit (0.0, 0.0, 0.0) ro rd
-		val hit = plane  hit (0.0, 0.0, 0.0) ro rd ( 0.0,  1.0,  0.0) 1.0
 		val hit = plane  hit (0.0, 0.0, 0.0) ro rd ( 0.0, ~1.0,  0.0) 3.0
+		val hit = plane  hit (0.0, 0.0, 0.0) ro rd ( 0.0,  1.0,  0.0) 1.0
 		val hit = plane  hit (1.0, 0.0, 0.5) ro rd (~1.0,  0.0,  0.0) 3.0
 		val hit = plane  hit (0.0, 1.0, 0.5) ro rd ( 1.0,  0.0,  0.0) 3.0
 		val hit = plane  hit (0.0, 0.0, 0.0) ro rd ( 0.0,  0.0,  1.0) 8.0
@@ -111,25 +121,28 @@ fun tracer ro rd =
 	end;
 
 
-fun render rng ro rd n 0 = (v3c 0.0)
+fun render rng ro rd n 0 = (v3i 0)
   | render rng ro rd n l =
 	let
 		val rng = v3hash rng
+		val rng = v3hash (v3addvv (v3mulsv 100.0 ro) rng)
+		val rng = v3hash (v3addvv (v3mulsv 200.0 rd) rng)
+
 		val (t,sp,sn,emit) = tracer ro rd
 
-		val nrd = hemi sn rng
-		val nro = v3addvv sp (v3mulvs sn 0.001)
+		val ro = v3addvv sp (v3mulvs sn 0.001)
+		val rd = hemi sn rng
 
 		val nn = Int.max (n div g_dropoff, 1)
-		val nl = l - 1
+		val nl = l-1
 
-		fun accum rngk a 0 = a
-		  | accum rngk a k = accum (v3addvs rngk 4.0) (v3addvv a (render rngk nro nrd nn nl)) (k-1)
+		val samples = map (fn x => v3addvs rng (1.0 + 4.0 * Real.fromInt x)) (range 0 n)
+		val samples = map (fn x => render x ro rd nn nl) samples
 
-		val cum = accum rng (v3c 0.0) n
-		val cum = v3divvs cum (Math.pi * Real.fromInt n)
+		val acc = foldl (fn (x, y) => v3addvv x y) (v3i 0) samples
+		val acc = v3divvs acc (Math.pi * Real.fromInt n)
 	in
-		v3addvv emit cum
+		v3addvv emit acc
 	end;
 
 
@@ -159,23 +172,28 @@ fun pixel x y w h =
 
 fun status (w,h,t) x y =
 	let
-		val rprog = Real.fromInt (y * w + x) / Real.fromInt (w*h)
-		val iprog = Real.round (100.0 * rprog)
-		val sprog = Int.toString iprog
+		val rid = Real.fromInt (y * w + x)
+
+		val rprog = rid / Real.fromInt (w*h)
+		val sprog = Real.fmt (StringCvt.FIX (SOME 1)) (100.0 * rprog)
+		val iprog = Real.round (20.0 * rprog)
 
 		val sbar = range 0 20
-		val sbar = map (fn x => if (5 * x < iprog) then #"#" else #" ") sbar
+		val sbar = map (fn x => if (x < iprog) then #"#" else #".") sbar
 		val sbar = implode sbar
 
 		val ttime = #usr(Timer.checkCPUTimer(t))
 		val rtime = Time.toReal ttime
 		val stime = Real.fmt (StringCvt.FIX (SOME 3)) rtime
 
+		val rrate = rid / (rtime * 1000.0)
+		val srate = Real.fmt (StringCvt.FIX (SOME 3)) rrate
+
 		val rtotal = rtime / rprog
 		val rleft = rtotal - rtime
 		val sleft = Real.fmt (StringCvt.FIX (SOME 3)) rleft
 
-		val text = "\rRendering: [" ^ sbar ^ "] " ^ sprog ^ "% - elapsed: " ^ stime ^ " - left: " ^ sleft ^ " "
+		val text = "\rRendering: [" ^ sbar ^ "] " ^ sprog ^ "%, " ^ srate ^ "Kp/s, elapsed: " ^ stime ^ "s, left: " ^ sleft ^ "s "
 	in
 		print (text)
 	end
