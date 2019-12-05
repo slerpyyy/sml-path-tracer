@@ -6,6 +6,8 @@
 ![no-sosml](https://img.shields.io/badge/SOSML%20compatible-no%20:\(-red)
 ![the-king](https://img.shields.io/badge/long%20live-Holger%20Hermanns-yellow)
 
+[Deutsch](README-DE.md)
+
 What you're looking at is a physics-based path tracer fully written in Standard ML. In short, a path tracer tried to generate an image by retracing individual rays of light backward from the camera to the light source the originated from. This process is able to generate nearly photo-realistic images with very little code. The downside of this method is its performance. If we only trace one ray of light the image will be nothing but noise, but with every ray we calculate, the result converges towards a clear image.
 
 ## Results from 10 minutes of rendering
@@ -13,9 +15,14 @@ What you're looking at is a physics-based path tracer fully written in Standard 
 ![preview-image](https://github.com/slerpyyy/sml-path-tracer/blob/master/preview.png?raw=true)
 
 # How to run this thing
-You can install SML and download the repo using the following commands:
+
+In the likely case you don't have an SML interpreter installed on your machine, you want to install one first. I recommend SML/NJ as it is the easiest to install:
 ```
 apt-get install smlnj
+```
+
+Now you can download the repository using the following command:
+```
 git clone https://github.com/slerpyyy/sml-path-tracer.git
 cd sml-path-tracer
 ```
@@ -32,3 +39,7 @@ The result should be in your working directory under `result.ppm`.
 # Motivation
 
 This project is a demonstration of the capabilities of Standard ML. At uni, I keep hearing fellow students whining around about how SML is useless and you can't do anything fun with it. I don't like SML either, but as horrible as that language might be, I wrote a working path tracer in it.
+
+# Credits
+
+All code was written by [Aaron Bies](https://github.com/slerpyyy), a student at Saarland University.
