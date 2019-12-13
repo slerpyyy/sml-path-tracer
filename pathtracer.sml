@@ -76,7 +76,7 @@ fun sphere (t,sp,sn,e) emit ro rd =
 			in
 				if d > l
 				then
-					(10000.0, v3i 0)
+					(10000.0, p)
 				else
 					if m > 0.0001
 					then h (d+m) p (i-1)
@@ -172,7 +172,8 @@ fun pixel x y w h =
 
 fun status (w,h,t) x y =
 	let
-		val rid = Real.fromInt (y * w + x)
+		val iid = y * w + x
+		val rid = Real.fromInt iid
 
 		val rprog = rid / Real.fromInt (w*h)
 		val sprog = Real.fmt (StringCvt.FIX (SOME 1)) (100.0 * rprog)
