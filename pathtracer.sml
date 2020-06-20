@@ -1,9 +1,9 @@
 val g_filename = "result.ppm"
-val g_dimensions = (320, 180)
+val g_dimensions = (320*4, 180*4)
 
-val g_samples = 8
+val g_samples = 64
 val g_bounces = 4
-val g_dropoff = 2
+val g_dropoff = 32
 
 
 type v3 = real * real * real;
@@ -31,11 +31,11 @@ fun v3i s = v3r (Real.fromInt s);
 fun v3m f (x,y,z) = (f x, f y, f z);
 fun v3op f (x,y,z) (a,b,c) = (f x a, f y b, f z c);
 
-fun v3neg (x,y,z) : v3 = (~x, ~y, ~z);
+fun v3neg ((x,y,z) : v3) : v3 = (~x, ~y, ~z);
 
-fun v3dot (x,y,z) (a,b,c) : real = x*a + y*b + z*c;
-fun v3len v = Math.sqrt(v3dot v v);
-fun v3norm v = v3divvs v (v3len v);
+fun v3dot ((x,y,z) : v3) ((a,b,c) : v3) : real = x*a + y*b + z*c;
+fun v3len (v : v3) = Math.sqrt(v3dot v v);
+fun v3norm (v : v3) = v3divvs v (v3len v);
 
 
 fun range s e =
@@ -44,7 +44,7 @@ fun range s e =
 	else nil;
 
 
-fun v3hash (x,y,z) : v3 =
+fun v3hash ((x,y,z) : v3) : v3 =
 	let
 		fun mod1 x = x - (Real.realFloor x)
 		fun helper a b = mod1 (1000.0 * Math.sin(a) + b + 0.5)
@@ -53,7 +53,20 @@ fun v3hash (x,y,z) : v3 =
 	end;
 
 
-fun hemi n (rx,ry,_) : v3 =
+val v3rand =
+	let
+		val temp_h = v3hash o v3hash
+		val temp_h = temp_h o temp_h
+		val temp_h = temp_h o temp_h
+		val temp_h = temp_h o temp_h
+
+		val state = ref (temp_h (1.0, 2.0, 3.0))
+	in
+		(fn () => (state := v3hash (!state); !state : v3))
+	end;
+
+
+fun hemi (n : v3) ((rx,ry,_) : v3) : v3 =
 	let
 		val a = 2.0 * rx - 1.0;
 		val b = 2.0 * ry * Math.pi;
@@ -66,30 +79,22 @@ fun hemi n (rx,ry,_) : v3 =
 
 fun sphere (t,sp,sn,e) emit ro rd =
 	let
-		val l = 1.0 + (v3len ro)
-
-		fun h d q 0 = (d, q)
-		  | h d _ i =
-			let
-				val p = v3addvv ro (v3mulvs rd d)
-				val m = v3len(p) - 1.0
-			in
-				if d > l
-				then
-					(10000.0, p)
-				else
-					if m > 0.0001
-					then h (d+m) p (i-1)
-					else h (d+m) p 0
-			end
-
-		val (nt,nsp) = h 0.0 (v3i 0) 64
-		val nsp = (v3norm nsp)
-		val nsn = nsp
+		val oc = v3neg ro
+		val b = v3dot rd oc
+		val c = v3dot oc oc - 1.0
+		val h = b * b - c
 	in
-		if nt < t
-		then (nt, nsp, nsn, emit)
-		else (t, sp, sn, e)
+		if h < 0.0
+		then (t, sp, sn, e)
+		else let
+			val nt = b + (Math.sqrt h)
+			val nsp = v3addvv ro (v3mulvs rd nt)
+			val nsn = v3norm nsp
+		in
+			if nt > 0.0 andalso nt < t
+			then (nt, nsn, nsn, emit)
+			else (t, sp, sn, e)
+		end
 	end;
 
 
@@ -121,12 +126,10 @@ fun tracer ro rd =
 	end;
 
 
-fun render rng ro rd n 0 = (v3i 0)
-  | render rng ro rd n l =
+fun render ro rd n 0 = (v3i 0)
+  | render ro rd n l =
 	let
-		val rng = v3hash rng
-		val rng = v3hash (v3addvv (v3mulsv 100.0 ro) rng)
-		val rng = v3hash (v3addvv (v3mulsv 200.0 rd) rng)
+		val rng = v3rand ()
 
 		val (t,sp,sn,emit) = tracer ro rd
 
@@ -136,8 +139,7 @@ fun render rng ro rd n 0 = (v3i 0)
 		val nn = Int.max (n div g_dropoff, 1)
 		val nl = l-1
 
-		val samples = map (fn x => v3addvs rng (1.0 + 4.0 * Real.fromInt x)) (range 0 n)
-		val samples = map (fn x => render x ro rd nn nl) samples
+		val samples = map (fn _ => render ro rd nn nl) (range 0 n)
 
 		val acc = foldl (fn (x, y) => v3addvv x y) (v3i 0) samples
 		val acc = v3divvs acc (Math.pi * Real.fromInt n)
@@ -148,9 +150,6 @@ fun render rng ro rd n 0 = (v3i 0)
 
 fun pixel x y w h =
 	let
-		val seed = v3m (fn x => Real.fromInt x) (x, y, 1)
-		val seed = v3hash (v3hash (v3hash (v3hash seed)))
-
 		val rdx = Real.fromInt (2 * x - w)
 		val rdy = Real.fromInt (h - 2 * y)
 		val rdz = Real.fromInt (2 * h)
@@ -158,7 +157,7 @@ fun pixel x y w h =
 		val rd = v3norm (rdx, rdy, rdz)
 		val ro = (0.0, 1.0, ~6.2)
 
-		val emit = render seed ro rd g_samples g_bounces
+		val emit = render ro rd g_samples g_bounces
 
 		val col = v3mulvs emit 12.0
 		val col = v3m (fn c => Real.max(0.0, Real.min(1.0, c))) col
